@@ -2,14 +2,17 @@
 
 	"variables": {
 	    	"aws_access_key": "", 
-	    	"aws_secret_key": ""
-  		},  
+	    	"aws_secret_key": "",
+	    	"ami_id": "ami-9abea4fb",
+	    	"supervisor_version": "3.0b2-1"
+	    	"auth_header": "{{env 'AUTH_HEADER'}}"
+	    },
 
 	"builders" : [
 		{
 			"type": "amazon-ebs",
 			"region": "us-west-2"
-			"source_ami": "ami-9abea4fb",
+			"source_ami": "{{user 'ami_id'}}",
 			"instance_type": "t2.micro",
 			"ssh_username": "ubuntu", 
 			"ami_name": "MiddleTier-{{isotime | clean_ami_name}}",
@@ -33,16 +36,48 @@
 		{ 	
 			"type": "ansible-local",
 			"playbook_file": "./playbook.yml"
-		}
+		},
+		{ 	
+			"type": "file",
+			"source": "upload/nginx.conf"
+			"destination" : /tmp/nginx.conf"
+		},
+		{ 	
+			"type": "file",
+			"source": "upload/app"
+			"destination" : /tmp/app"
+		},
+		{ 	
+			"type": "file",
+			"source": "upload/app-supervisor.conf"
+			"destination" : "/tmp/app-supervisor.conf"
+		},
+		{ 	
+			"type": "shell",
+			"script": "scripts/nginx.sh"  
+			"environment_vars": [
+				"AUTH_HEADER={{user 'auth_header'}}"
+			] 
+		},
+		{ 	
+			"type": "shell",
+			"inline": [
+				"echo '**** Configuration application' ",
+				"sudo apt-get install -y supervisor={{user 'supervisor_version'}}", 
+				"sudo cp /tmp/app-supervisor.conf/etc/supervisor.conf.d",
+				"sudo cp/tmp/app/usr/local/bin/app",
+				"sudo supervisorct1 reread", 
+				"sudo supervisorct1 update" 
 
+			] 
+		},
 	],
 
 	"post-processors" : [
 
-		{
+		{ 
 
 		}
-
 	],
 
 }
